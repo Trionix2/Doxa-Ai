@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doxa AI — Authentication Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script type="text/javascript">
+        (function() {
+            emailjs.init({ publicKey: "GHxJqyiZqMz3TP7Y4" });
+        })();
+    </script>
+    <style>
+        :root {
+            --bg-main: #0b0714;
+            --bg-surface: rgba(22, 16, 38, 0.85);
+            --bg-hover: rgba(45, 32, 77, 0.7);
+            --text-main: #f3e8ff;
+            --text-secondary: #b9a8c7;
+            --accent: #a855f7;
+            --accent-glow: rgba(168, 85, 247, 0.4);
+            --border: rgba(168, 85, 247, 0.2);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- HUGE 3D SPINNING BACKGROUND HUB ICON --- */
+        .bg-3d-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 1;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+
+        .spinning-hub {
+            font-size: 550px;
+            color: rgba(168, 85, 247, 0.12);
+            animation: spin3D 25s linear infinite;
+            transform-style: preserve-3d;
+            user-select: none;
+            filter: drop-shadow(0 0 50px rgba(168, 85, 247, 0.1));
+        }
+
+        @keyframes spin3D {
+            0% {
+                transform: rotateX(20deg) rotateY(0deg) rotateZ(0deg) scale(1);
+            }
+            50% {
+                transform: rotateX(-20deg) rotateY(180deg) rotateZ(15deg) scale(1.15);
+            }
+            100% {
+                transform: rotateX(20deg) rotateY(360deg) rotateZ(0deg) scale(1);
+            }
+        }
+
+        /* Ambient gradient light effect in background */
+        .glow-orb {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(147, 51, 234, 0.2) 0%, rgba(11, 7, 20, 0) 70%);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .login-card {
+            background-color: var(--bg-surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            padding: 40px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(168, 85, 247, 0.15);
+            position: relative;
+            z-index: 10;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .back-arrow {
+            background: none;
+            border: none;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 6px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+            margin-right: 12px;
+        }
+
+        .back-arrow:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .tabs {
+            display: flex;
+            background-color: rgba(11, 7, 20, 0.6);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #9333ea, #7e22ce);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4);
+        }
+
+        .login-card h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .login-card p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: rgba(11, 7, 20, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .input-group input:focus { 
+            border-color: var(--accent); 
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #a855f7, #7e22ce);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+        }
+
+        .login-btn:hover { 
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
+        }
+
+        #error-msg {
+            color: #fca5a5;
+            font-size: 12px;
+            margin-top: 12px;
+            display: none;
+            text-align: center;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- Background 3D Spinning Doxa Hub Icon & Glow -->
+    <div class="glow-orb"></div>
+    <div class="bg-3d-container">
+        <span class="material-icons-outlined spinning-hub">hub</span>
+    </div>
+
+    <div class="login-card">
+        <!-- Header with Back Arrow & Tabs -->
+        <div class="card-header" id="header-container">
+            <button class="back-arrow hidden" id="back-btn" onclick="goBack()" title="Back">
+                <span class="material-icons-outlined">arrow_back</span>
+            </button>
+            <div class="tabs" id="tabs-container" style="flex: 1; margin-bottom: 0;">
+                <button class="tab active" id="signin-tab" onclick="switchMode('signin')">Sign In</button>
+                <button class="tab" id="signup-tab" onclick="switchMode('signup')">Sign Up</button>
+            </div>
+        </div>
+
+        <h2 id="form-title">Welcome Back</h2>
+        <p id="form-subtitle">Sign in to access your saved chat logs.</p>
+        
+        <!-- Main Auth Form -->
+        <form id="auth-form">
+            <div class="input-group" id="username-group" style="display: none;">
+                <label for="username">Display Name</label>
+                <input type="text" id="username" placeholder="e.g. Alex" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="e.g. alex@example.com" required autocomplete="off">
+            </div>
+            <button type="submit" id="main-btn" class="login-btn">Send Sign In Code</button>
+        </form>
+
+        <!-- OTP Verification Form -->
+        <form id="otp-form" class="hidden">
+            <div class="input-group">
+                <label for="otp-code">Enter 6-Digit Verification Code</label>
+                <input type="text" id="otp-code" placeholder="123456" maxlength="6" required autocomplete="off" style="text-align: center; font-size: 18px; letter-spacing: 4px;">
+            </div>
+            <button type="submit" class="login-btn">Verify & Launch Doxa AI</button>
+        </form>
+
+        <div id="error-msg"></div>
+    </div>
+
+    <script>
+        let currentMode = 'signin';
+        let generatedOtp = "";
+        let pendingData = {};
+
+        const signinTab = document.getElementById('signin-tab');
+        const signupTab = document.getElementById('signup-tab');
+        const formTitle = document.getElementById('form-title');
+        const formSubtitle = document.getElementById('form-subtitle');
+        const usernameGroup = document.getElementById('username-group');
+        const usernameInput = document.getElementById('username');
+        const mainBtn = document.getElementById('main-btn');
+        const authForm = document.getElementById('auth-form');
+        const otpForm = document.getElementById('otp-form');
+        const errorDiv = document.getElementById('error-msg');
+        const backBtn = document.getElementById('back-btn');
+        const tabsContainer = document.getElementById('tabs-container');
+
+        function switchMode(mode) {
+            currentMode = mode;
+            errorDiv.style.display = 'none';
+            authForm.reset();
+            
+            if (mode === 'signin') {
+                signinTab.classList.add('active');
+                signupTab.classList.remove('active');
+                formTitle.textContent = "Welcome Back";
+                formSubtitle.textContent = "Sign in to access your saved chat logs.";
+                usernameGroup.style.display = 'none';
+                usernameInput.required = false;
+                mainBtn.textContent = "Send Sign In Code";
+            } else {
+                signupTab.classList.add('active');
+                signinTab.classList.remove('active');
+                formTitle.textContent = "Create Account";
+                formSubtitle.textContent = "Sign up for a fresh workspace with zero chat history.";
+                usernameGroup.style.display = 'block';
+                usernameInput.required = true;
+                mainBtn.textContent = "Send Sign Up Code";
+            }
+        }
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const username = currentMode === 'signup' ? usernameInput.value.trim() : email.split('@')[0];
+            errorDiv.style.display = 'none';
+
+            generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+            pendingData = { email, username, mode: currentMode };
+
+            mainBtn.textContent = "Sending Code...";
+            mainBtn.disabled = true;
+
+            // Lock tabs and show back arrow while waiting for verification
+            tabsContainer.classList.add('hidden');
+            backBtn.classList.remove('hidden');
+
+            try {
+                await emailjs.send("service_us6etit", "template_qosbe1d", {
+                    to_email: email,
+                    to_name: username,
+                    passcode: generatedOtp
+                });
+
+                authForm.classList.add('hidden');
+                otpForm.classList.remove('hidden');
+                formSubtitle.textContent = `Verification code sent to ${email}`;
+            } catch (err) {
+                errorDiv.textContent = "Failed to send verification email. Check configuration.";
+                errorDiv.style.display = 'block';
+                mainBtn.textContent = currentMode === 'signin' ? "Send Sign In Code" : "Send Sign Up Code";
+                mainBtn.disabled = false;
+                // Restore tabs if sending fails
+                tabsContainer.classList.remove('hidden');
+                backBtn.classList.add('hidden');
+            }
+        });
+
+        function goBack() {
+            otpForm.classList.add('hidden');
+            authForm.classList.remove('hidden');
+            backBtn.classList.add('hidden');
+            tabsContainer.classList.remove('hidden');
+            errorDiv.style.display = 'none';
+            mainBtn.disabled = false;
+            mainBtn.textContent = currentMode === 'signin' ? "Send Sign In Code" : "Send Sign Up Code";
+            
+            if (currentMode === 'signin') {
+                formTitle.textContent = "Welcome Back";
+                formSubtitle.textContent = "Sign in to access your saved chat logs.";
+            } else {
+                formTitle.textContent = "Create Account";
+                formSubtitle.textContent = "Sign up for a fresh workspace with zero chat history.";
+            }
+        }
+
+        otpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const enteredOtp = document.getElementById('otp-code').value.trim();
+            errorDiv.style.display = 'none';
+
+            if (enteredOtp !== generatedOtp) {
+                errorDiv.textContent = "Invalid verification code. Please try again.";
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pendingData)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = data.redirect;
+                } else {
+                    errorDiv.textContent = data.error || 'Authentication failed';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server connection fault.';
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
