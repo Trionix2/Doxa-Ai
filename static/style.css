@@ -150,19 +150,27 @@ body {
     color: #ef4444;
 }
 
+/* Ensure your sidebar uses flexbox so the footer stays pinned without overflowing */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    overflow-hidden: hidden;
+}
+
 /* --- SIDEBAR FOOTER --- */
 .sidebar-footer {
-    padding: 16px;
+    padding: 12px 16px;
+    /* Adds extra padding at the very bottom for mobile home indicator bars */
+    padding-bottom: max(12px, env(safe-area-inset-bottom)); 
     border-top: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: space-between;
     background-color: var(--bg-sidebar);
-    
-    /* Mobile viewport & overflow safety */
     margin-top: auto;
     flex-shrink: 0;
-    position: relative;
     width: 100%;
 }
 
@@ -183,6 +191,7 @@ body {
     align-items: center;
     text-decoration: none;
     transition: color 0.2s;
+    padding: 4px; /* Makes it easier to tap on mobile */
 }
 
 .logout-btn:hover {
