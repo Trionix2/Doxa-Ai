@@ -151,13 +151,6 @@ body {
 }
 
 /* Ensure your sidebar uses flexbox so the footer stays pinned without overflowing */
-.sidebar {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh; /* Dynamic viewport height for mobile browsers */
-    overflow-hidden: hidden;
-}
 
 /* --- SIDEBAR FOOTER --- */
 .sidebar-footer {
