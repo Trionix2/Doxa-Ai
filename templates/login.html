@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doxa AI — Authentication Portal</title>
-<link rel="icon" href="../static/icons8-hub-50.png" type="image/png">    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="../static/icons8-hub-50.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -16,7 +17,7 @@
     <style>
         :root {
             --bg-main: #0b0714;
-            --bg-surface: rgba(22, 16, 38, 0.85);
+            --bg-surface: rgba(22, 16, 38, 0.88);
             --bg-hover: rgba(45, 32, 77, 0.7);
             --text-main: #f3e8ff;
             --text-secondary: #b9a8c7;
@@ -24,6 +25,7 @@
             --accent-glow: rgba(168, 85, 247, 0.4);
             --border: rgba(168, 85, 247, 0.2);
         }
+        
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         
         body {
@@ -32,14 +34,17 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            width: 100vw;
+            overflow-x: hidden;
+            overflow-y: auto;
             position: relative;
+            padding: 20px;
         }
 
-        /* --- HUGE 3D SPINNING BACKGROUND HUB ICON --- */
+        /* --- RESPONSIVE 3D SPINNING BACKGROUND HUB ICON --- */
         .bg-3d-container {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
@@ -54,7 +59,7 @@
         }
 
         .spinning-hub {
-            font-size: 550px;
+            font-size: min(120vw, 550px);
             color: rgba(168, 85, 247, 0.12);
             animation: spin3D 25s linear infinite;
             transform-style: preserve-3d;
@@ -63,25 +68,20 @@
         }
 
         @keyframes spin3D {
-            0% {
-                transform: rotateX(20deg) rotateY(0deg) rotateZ(0deg) scale(1);
-            }
-            50% {
-                transform: rotateX(-20deg) rotateY(180deg) rotateZ(15deg) scale(1.15);
-            }
-            100% {
-                transform: rotateX(20deg) rotateY(360deg) rotateZ(0deg) scale(1);
-            }
+            0% { transform: rotateX(20deg) rotateY(0deg) rotateZ(0deg) scale(1); }
+            50% { transform: rotateX(-20deg) rotateY(180deg) rotateZ(15deg) scale(1.15); }
+            100% { transform: rotateX(20deg) rotateY(360deg) rotateZ(0deg) scale(1); }
         }
 
         /* Ambient gradient light effect in background */
         .glow-orb {
-            position: absolute;
-            width: 600px;
-            height: 600px;
+            position: fixed;
+            width: min(90vw, 600px);
+            height: min(90vw, 600px);
             background: radial-gradient(circle, rgba(147, 51, 234, 0.2) 0%, rgba(11, 7, 20, 0) 70%);
             border-radius: 50%;
             z-index: 1;
+            pointer-events: none;
         }
 
         .login-card {
@@ -89,13 +89,14 @@
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--border);
-            padding: 40px;
+            padding: clamp(24px, 5vw, 40px);
             border-radius: 20px;
             width: 100%;
             max-width: 420px;
             box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(168, 85, 247, 0.15);
             position: relative;
             z-index: 10;
+            margin: auto;
         }
 
         .card-header {
@@ -111,10 +112,12 @@
             cursor: pointer;
             display: flex;
             align-items: center;
-            padding: 6px;
+            justify-content: center;
+            padding: 8px;
             border-radius: 50%;
             transition: background-color 0.2s;
             margin-right: 12px;
+            flex-shrink: 0;
         }
 
         .back-arrow:hover {
@@ -126,8 +129,8 @@
             background-color: rgba(11, 7, 20, 0.6);
             border-radius: 10px;
             padding: 4px;
-            margin-bottom: 24px;
             border: 1px solid var(--border);
+            width: 100%;
         }
 
         .tab {
@@ -137,10 +140,11 @@
             border: none;
             color: var(--text-secondary);
             font-weight: 600;
-            font-size: 13px;
+            font-size: clamp(12px, 3vw, 13px);
             cursor: pointer;
             border-radius: 8px;
             transition: all 0.2s ease;
+            text-align: center;
         }
 
         .tab.active {
@@ -150,7 +154,7 @@
         }
 
         .login-card h2 {
-            font-size: 24px;
+            font-size: clamp(20px, 4vw, 24px);
             font-weight: 700;
             margin-bottom: 6px;
             color: var(--text-main);
@@ -159,8 +163,9 @@
 
         .login-card p {
             color: var(--text-secondary);
-            font-size: 13px;
+            font-size: clamp(12px, 2.5vw, 13px);
             margin-bottom: 24px;
+            line-height: 1.4;
         }
 
         .input-group {
@@ -214,6 +219,10 @@
             box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
         }
 
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
         #error-msg {
             color: #fca5a5;
             font-size: 12px;
@@ -223,6 +232,13 @@
         }
 
         .hidden { display: none !important; }
+
+        /* Extra small device fallback adjustments */
+        @media (max-width: 360px) {
+            .login-card {
+                padding: 18px;
+            }
+        }
     </style>
 </head>
 <body>

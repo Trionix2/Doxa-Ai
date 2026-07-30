@@ -61,7 +61,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     renderSidebarHistory();
+
+    const chatInput = document.querySelector('.chat-input-textarea') || document.querySelector('textarea');
+
+if (chatInput) {
+    chatInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+}
 });
+
 
 // --- Input & File Preview Setup ---
 function setupPreviewContainers() {
@@ -91,6 +101,7 @@ function setupPreviewContainers() {
         }
     });
 });
+
 // --- Smart Sidebar Toggle (Desktop Collapse vs Mobile Drawer) ---
 window.toggleSidebar = function() {
     if (!sidebar) return;
@@ -98,7 +109,6 @@ window.toggleSidebar = function() {
     const isMobile = window.innerWidth <= 768;
 
     if (isMobile) {
-        // Mobile Drawer Toggle
         sidebar.classList.toggle('open');
         let isOpen = sidebar.classList.contains('open');
         
@@ -121,11 +131,9 @@ window.toggleSidebar = function() {
             }
         }
     } else {
-        // Desktop Collapse Toggle (No dimming, no backdrop)
         sidebar.classList.toggle('collapsed');
-        sidebar.classList.remove('open'); // Clean up any mobile state
+        sidebar.classList.remove('open');
         
-        // Remove any stray backdrop if switching from mobile dimensions
         let backdrop = document.getElementById('sidebar-backdrop');
         if (backdrop) backdrop.remove();
     }
@@ -262,7 +270,34 @@ function showToast(message) {
     setTimeout(() => { toast.style.opacity = '0'; }, 2500);
 }
 
-// --- Unified Message & Image Generation Sending Pipeline ---
+// --- Read More / Collapsible Helper ---
+function makeCollapsible(msgDiv, contentElement) {
+    setTimeout(() => {
+        if (contentElement.scrollHeight > 90) {
+            contentElement.classList.add('clamped');
+            
+            const wrapper = contentElement.closest('.user-message, .ai-message') || msgDiv;
+            let toggleBtn = wrapper.querySelector('.read-more-btn');
+            
+            if (!toggleBtn) {
+                toggleBtn = document.createElement('button');
+                toggleBtn.className = 'read-more-btn';
+                toggleBtn.innerText = 'Read More';
+                toggleBtn.style.display = 'block';
+                
+                toggleBtn.onclick = () => {
+                    const isExpanded = contentElement.classList.toggle('expanded');
+                    contentElement.classList.toggle('clamped', !isExpanded);
+                    toggleBtn.innerText = isExpanded ? 'Read Less' : 'Read More';
+                };
+                
+                wrapper.appendChild(toggleBtn);
+            }
+        }
+    }, 50);
+}
+
+// --- Unified Message Sending Pipeline ---
 async function sendMessage() {
     const textInput = isFirstMessage ? userInputWelcome : userInputActive;
     if (!textInput) return;
@@ -294,18 +329,21 @@ async function sendMessage() {
     const userMsgDiv = document.createElement('div');
     userMsgDiv.className = 'user-message';
 
+    let displayUserText = text;
     if (currentAttachedFile) {
         const filePart = await fileToGenerativePart(currentAttachedFile);
         userParts.push(filePart);
         const fileDisplayName = currentAttachedFile.name;
         clearAttachedFile();
-        userMsgDiv.innerText = `${text ? text + ' ' : ''}[Attached: ${fileDisplayName}]`;
-    } else {
-        userMsgDiv.innerText = text;
+        displayUserText = `${text ? text + ' ' : ''}[Attached: ${fileDisplayName}]`;
     }
 
+    userMsgDiv.innerHTML = `<div class="message-content">${displayUserText}</div>`;
     userRowWrapper.appendChild(userMsgDiv);
     chatContainer.appendChild(userRowWrapper);
+
+    const userContentEl = userMsgDiv.querySelector('.message-content');
+    makeCollapsible(userMsgDiv, userContentEl);
 
     textInput.value = '';
     textInput.style.height = 'auto';
@@ -324,85 +362,46 @@ async function sendMessage() {
     chatContainer.appendChild(aiRowWrapper);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
-    // Check if the user is asking to generate an image
-    const lowerText = text.toLowerCase();
-    const isImageRequest = 
-        lowerText.includes('generate') || 
-        lowerText.includes('draw') || 
-        lowerText.includes('create an image') ||
-        lowerText.includes('make an image') ||
-        lowerText.includes('render an image');
+    // Standard Text Streaming Pipeline
+    try {
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ history: currentChatHistory, mode: currentAiMode })
+        });
 
-    if (isImageRequest && !currentAttachedFile) {
-        aiMsgDiv.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Generating your image... 🎨</p>`;
-        try {
-            const response = await fetch('/generate-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: text })
-            });
+        if (!response.ok) throw new Error("Server communication fault");
 
-            const data = await response.json();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let aiResponseText = "";
 
-            if (data.success) {
-                aiMsgDiv.innerHTML = `
-                    <div class="message-content">
-                        <p>${window.marked ? marked.parse(data.response_text) : data.response_text}</p>
-                        <div class="generated-image-container" style="margin-top: 12px;">
-                            <a href="${data.image_url}" target="_blank" title="Click to view full size">
-                                <img src="${data.image_url}" alt="Generated AI Image" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: block;">
-                            </a>
-                        </div>
-                    </div>
-                `;
-                currentChatHistory.push({ "role": "model", "parts": [{ "text": `${data.response_text} [Image Generated]` }] });
-                saveStorage();
-            } else {
-                aiMsgDiv.innerHTML = `<span style="color: #ff6b6b;">[Error generating image: ${data.error}]</span>`;
-            }
-        } catch (err) {
-            console.error("Image Gen Error:", err);
-            aiMsgDiv.innerHTML = `<span style="color: #ff6b6b;">[Connection Error: Failed to reach image generator.]</span>`;
+        aiMsgDiv.innerHTML = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            aiResponseText += chunk;
+            
+            aiMsgDiv.innerHTML = `<div class="message-content">${window.marked ? marked.parse(aiResponseText) : aiResponseText}</div>`;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-    } else {
-        // Standard Text Streaming Pipeline
-        try {
-            const response = await fetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ history: currentChatHistory, mode: currentAiMode })
-            });
 
-            if (!response.ok) throw new Error("Server communication fault");
+        currentChatHistory.push({ "role": "model", "parts": [{ "text": aiResponseText }] });
+        saveStorage();
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let aiResponseText = "";
+        const finalContentEl = aiMsgDiv.querySelector('.message-content');
+        makeCollapsible(aiMsgDiv, finalContentEl);
 
-            aiMsgDiv.innerHTML = "";
-
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                aiResponseText += chunk;
-                
-                aiMsgDiv.innerHTML = `<div class="message-content">${window.marked ? marked.parse(aiResponseText) : aiResponseText}</div>`;
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-
-            currentChatHistory.push({ "role": "model", "parts": [{ "text": aiResponseText }] });
-            saveStorage();
-
-            if (window.hljs) {
-                document.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
-            }
-        } catch (err) {
-            console.error("Error:", err);
-            aiMsgDiv.innerHTML = `<span style="color: #ff6b6b;">[Connection Error: Failed to reach backend generator.]</span>`;
-            return;
+        if (window.hljs) {
+            document.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
         }
+    } catch (err) {
+        console.error("Error:", err);
+        aiMsgDiv.innerHTML = `<span style="color: #ff6b6b;">[Connection Error: Failed to reach backend generator.]</span>`;
+        return;
     }
 
     // Append action buttons bar
@@ -420,11 +419,11 @@ async function sendMessage() {
 
     const activeTitle = chatHistories.find(h => h.id === currentChatId)?.title || 'New Chat';
     saveChatToServer(currentChatId, activeTitle, currentChatHistory);
-    // Replace instances of scrolling with a safe check that respects your current manual scroll position if you're looking up:
-const isScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 150;
-if (isScrolledToBottom) {
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-}
+    
+    const isScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 150;
+    if (isScrolledToBottom) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
 }
 
 // --- Action Helpers ---
@@ -444,14 +443,12 @@ function regenerateMessage() {
 }
 
 // --- UI Restoration & Storage Management ---
-// --- UI Restoration & Storage Management ---
 function restoreUIState() {
     if (welcomeScreen) welcomeScreen.style.display = 'none';
     if (chatContainer) {
         chatContainer.style.display = 'flex';
-        // Remove fixed height or scrolling constraints to let it flow naturally
-        chatContainer.style.overflowY = 'visible';
-        chatContainer.style.height = 'auto';
+        chatContainer.style.overflowY = 'auto';
+        chatContainer.style.height = '100%';
     }
     if (activeInputArea) activeInputArea.style.display = 'flex';
 
@@ -468,6 +465,7 @@ function restoreUIState() {
                 msgDiv.innerHTML = `<div class="message-content">${window.marked ? marked.parse(msg.parts[0].text) : msg.parts[0].text}</div>`;
                 rowWrapper.appendChild(msgDiv);
                 
+                // Action buttons bar preserved ONLY for AI responses
                 const actionButtonsBar = document.createElement('div');
                 actionButtonsBar.className = 'message-actions';
                 actionButtonsBar.innerHTML = `
@@ -488,13 +486,16 @@ function restoreUIState() {
                 }
                 msgDiv.innerText = userText;
                 rowWrapper.appendChild(msgDiv);
+                // No action buttons or extra components attached to user rows
             }
             chatContainer.appendChild(rowWrapper);
         });
-        // Instead of forcing scrollTop on a constrained container, let the page flow or smoothly scroll to bottom on new messages only
+
+        setTimeout(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 50);
     }
 }
-
 function resetChat() {
     currentChatId = Date.now();
     isFirstMessage = true;
