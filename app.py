@@ -8,6 +8,8 @@ from supabase import create_client, Client
 from openai import OpenAI
 import os
 
+
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
 
@@ -28,6 +30,14 @@ PERSONALITY_PROMPTS = {
     "professional, technical, and objective": "You are a rigorous, serious, professional, and objective technical expert. Use sparse, clean, and professional emojis appropriately 💼.",
     "strict code snippets and minimal chatter": "You are a coding-only assistant. Provide clean code blocks with almost zero conversational text and neat, clean emojis 💻."
 }
+
+
+
+@app.route('/robots.txt')
+def robots_txt():
+    # Tells all search engine crawlers that they are allowed to crawl the site
+    content = "User-agent: *\nAllow: /"
+    return Response(content, mimetype="text/plain")
 
 @app.route('/')
 def index():
