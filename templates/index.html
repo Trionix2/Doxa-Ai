@@ -4,29 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doxa AI</title>
-<link rel="icon" href="../static/icons8-hub-50.png" type="image/png">    <!-- Google Fonts & Material Icons -->
+    <link rel="icon" href="../static/icons8-hub-50.png" type="image/png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Google Fonts & Material Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <!-- Highlight.js Dark Theme Stylesheet -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-<!-- Highlight.js Library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<!-- Include Marked.js for proper Markdown parsing -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <!-- Highlight.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Include Marked.js for proper Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- External CSS link -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    
 
 <!-- Sidebar Layout -->
 <aside id="sidebar">
     <div class="sidebar-header">
         <!-- Logo area now acts as the expand button when collapsed -->
-<div class="logo-area" onclick="toggleSidebarWithSpin(this)" title="Toggle sidebar" style="cursor: pointer;">
-    <span class="material-icons-outlined">hub</span>
-    <span class="sidebar-title">DOXA AI</span>
-</div>
+        <div class="logo-area" onclick="toggleSidebarWithSpin(this)" title="Toggle sidebar" style="cursor: pointer;">
+            <span class="material-icons-outlined">hub</span>
+            <span class="sidebar-title">DOXA AI</span>
+        </div>
         
         <!-- Hamburger menu button to collapse -->
         <button class="icon-btn toggle-sidebar-btn" onclick="toggleSidebar()" title="Close sidebar">
@@ -53,20 +54,21 @@
             </span>
         </div>
         
-        <a href="/logout" title="Sign Out" class="logout-btn">
-            <span class="material-icons-outlined" style="font-size: 20px;">logout</span>
-        </a>
+      <a href="/logout" title="Sign Out" class="logout-btn" onclick="event.preventDefault(); triggerLogout();">
+    <span class="material-icons-outlined" style="font-size: 20px;">logout</span>
+</a>
     </div>
 </aside>
+
 <!-- Main Section -->
 <main>
-<!-- Welcome View -->
- <!-- Mobile Toggle Button with your Doxa Logo Icon -->
-<button class="icon-btn mobile-menu-btn" onclick="toggleSidebar()" title="Toggle Menu" style="display: none; background: none; border: none; color: var(--accent-color, #a855f7); cursor: pointer; padding: 8px; position: absolute; top: 12px; left: 12px; z-index: 99;">
-    <span class="material-icons-outlined">hub</span>
-</button>
+    <!-- Mobile Toggle Button with your Doxa Logo Icon -->
+    <button class="icon-btn mobile-menu-btn" onclick="toggleSidebar()" title="Toggle Menu" style="display: none; background: none; border: none; color: var(--accent-color, #a855f7); cursor: pointer; padding: 8px; position: absolute; top: 12px; left: 12px; z-index: 99;">
+        <span class="material-icons-outlined">hub</span>
+    </button>
+
+    <!-- Welcome View -->
     <div class="welcome-screen" id="welcome-screen">
-        
         <!-- 3D Spinning Logo -->
         <div class="doxa-3d-logo-wrapper">
             <span class="material-icons-outlined doxa-spinning-logo">hub</span>
@@ -74,6 +76,8 @@
 
         <h1>Doxa AI core is online. How can I assist you today?</h1>
         <p>Your high-performance workspace companion powered by Gemini.</p>
+        
+        <!-- Gemini-Style Textarea Wrapper -->
         <div class="input-box-wrapper">
             <textarea id="user-input" rows="1" placeholder="Type your command or query..." autofocus></textarea>
             
@@ -100,12 +104,13 @@
             </div>
         </div>
     </div>
+
     <!-- Active Chat Feed Container -->
     <div class="chat-container" id="chat-container" style="display: none;">
         <!-- Dynamic Messages Go Here -->
     </div>
 
-    <!-- Fixed Active Input Area Bottom -->
+    <!-- Fixed Floating Active Input Area Bottom -->
     <div class="active-input-container" id="active-input-area" style="display: none;">
         <div class="input-box-wrapper">
             <textarea id="user-input-active" rows="1" placeholder="Reply to Doxa AI..."></textarea>
@@ -155,7 +160,11 @@
         </div>
     </div>
 </main>
-    <!-- External JavaScript Link -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+    
+</script>
+
+<!-- External JavaScript Link -->
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

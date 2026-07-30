@@ -2,3 +2,4 @@ flask
 supabase
 google-genai
 gunicorn
+openai

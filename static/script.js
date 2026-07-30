@@ -1,16 +1,34 @@
 // --- Global State & Initialization ---
 hljs.highlightAll();
+
+// 1. Robust Storage Prefix & Guest Isolation Handling
 const currentUsername = document.querySelector('.username-display')?.textContent?.trim() || "default_user";
-const storagePrefix = `doxa_${currentUsername}_`;
+const isGuestUser = (currentUsername === "Guest User" || currentUsername === "default_user" || !currentUsername || currentUsername === "None");
 
-let chatHistories = JSON.parse(localStorage.getItem(storagePrefix + 'chat_histories') || '[]');
-let currentChatId = Number(localStorage.getItem(storagePrefix + 'current_chat_id')) || Date.now();
+let storagePrefix;
+let activeStorage = localStorage;
 
-let currentChatHistory = JSON.parse(localStorage.getItem(storagePrefix + `conv_${currentChatId}`) || JSON.stringify([
+if (isGuestUser) {
+    let guestTabId = sessionStorage.getItem("doxa_guest_tab_id");
+    if (!guestTabId) {
+        guestTabId = 'guest_' + Math.random().toString(36).substring(2, 9);
+        sessionStorage.setItem("doxa_guest_tab_id", guestTabId);
+    }
+    storagePrefix = `doxa_temp_${guestTabId}_`;
+    activeStorage = sessionStorage; // Guests use sessionStorage so data never bleeds or persists globally
+} else {
+    storagePrefix = `doxa_${currentUsername}_`;
+    activeStorage = localStorage;
+}
+
+let chatHistories = JSON.parse(activeStorage.getItem(storagePrefix + 'chat_histories') || '[]');
+let currentChatId = Number(activeStorage.getItem(storagePrefix + 'current_chat_id')) || Date.now();
+
+let currentChatHistory = JSON.parse(activeStorage.getItem(storagePrefix + `conv_${currentChatId}`) || JSON.stringify([
     { "role": "model", "parts": [{ "text": "Doxa AI core is online. How can I assist you today?" }] }
 ]));
 
-let isFirstMessage = localStorage.getItem(storagePrefix + `is_first_${currentChatId}`) !== 'false' && currentChatHistory.length <= 1;
+let isFirstMessage = activeStorage.getItem(storagePrefix + `is_first_${currentChatId}`) !== 'false' && currentChatHistory.length <= 1;
 let currentAttachedFile = null;
 let currentAiMode = 'standard';
 
@@ -64,12 +82,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const chatInput = document.querySelector('.chat-input-textarea') || document.querySelector('textarea');
 
-if (chatInput) {
-    chatInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + 'px';
-    });
-}
+    if (chatInput) {
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    }
 });
 
 
@@ -272,6 +290,7 @@ function showToast(message) {
 
 // --- Read More / Collapsible Helper ---
 function makeCollapsible(msgDiv, contentElement) {
+    if (!msgDiv.classList.contains('user-message')) return;
     setTimeout(() => {
         if (contentElement.scrollHeight > 90) {
             contentElement.classList.add('clamped');
@@ -286,9 +305,10 @@ function makeCollapsible(msgDiv, contentElement) {
                 toggleBtn.style.display = 'block';
                 
                 toggleBtn.onclick = () => {
-                    const isExpanded = contentElement.classList.toggle('expanded');
-                    contentElement.classList.toggle('clamped', !isExpanded);
-                    toggleBtn.innerText = isExpanded ? 'Read Less' : 'Read More';
+                    const expanded = contentElement.classList.toggle('expanded');
+                    contentElement.classList.toggle('clamped', !expanded);
+                    toggleBtn.classList.toggle('expanded', expanded);
+                    toggleBtn.innerHTML = expanded ? 'Show Less' : 'Show More';
                 };
                 
                 wrapper.appendChild(toggleBtn);
@@ -296,6 +316,86 @@ function makeCollapsible(msgDiv, contentElement) {
         }
     }, 50);
 }
+
+// --- Gemini-Style Code Block Enhancement Pipeline ---
+function enhanceCodeBlocks(container = document) {
+    container.querySelectorAll('pre').forEach(pre => {
+        if (pre.dataset.enhanced) return;
+        pre.dataset.enhanced = 'true';
+
+        const codeEl = pre.querySelector('code');
+        let lang = 'code';
+        if (codeEl) {
+            const match = Array.from(codeEl.classList).find(c => c.startsWith('language-'));
+            if (match) lang = match.replace('language-', '');
+        }
+
+        const header = document.createElement('div');
+        header.className = 'code-header';
+        header.innerHTML = `
+            <span class="code-lang-badge">${lang}</span>
+            <div class="code-actions">
+                <button class="code-action-btn" onclick="copyCodeBlock(this)" title="Copy code">
+                    <span class="material-icons-outlined" style="font-size: 16px;">content_copy</span>
+                </button>
+                <button class="code-action-btn" onclick="downloadCodeBlock(this)" title="Download file">
+                    <span class="material-icons-outlined" style="font-size: 16px;">download</span>
+                </button>
+            </div>
+        `;
+
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'code-content-wrapper';
+
+        pre.parentNode.insertBefore(header, pre);
+        contentWrapper.appendChild(pre);
+
+        const blockContainer = document.createElement('div');
+        blockContainer.className = 'code-block-container';
+        header.parentNode.insertBefore(blockContainer, header);
+        blockContainer.appendChild(header);
+        blockContainer.appendChild(contentWrapper);
+    });
+}
+
+window.copyCodeBlock = function(btn) {
+    const blockContainer = btn.closest('.code-block-container');
+    const codeEl = blockContainer.querySelector('code') || blockContainer.querySelector('pre');
+    if (codeEl) {
+        navigator.clipboard.writeText(codeEl.innerText);
+        const iconSpan = btn.querySelector('.material-icons-outlined');
+        const originalIcon = iconSpan.innerText;
+        
+        iconSpan.innerText = 'check';
+        setTimeout(() => {
+            iconSpan.innerText = originalIcon;
+        }, 2000);
+    }
+};
+
+window.downloadCodeBlock = function(btn) {
+    const blockContainer = btn.closest('.code-block-container');
+    const langBadge = blockContainer.querySelector('.code-lang-badge');
+    const codeEl = blockContainer.querySelector('code') || blockContainer.querySelector('pre');
+    
+    let ext = 'txt';
+    const lang = langBadge ? langBadge.innerText.toLowerCase() : 'txt';
+    const extMap = { python: 'py', javascript: 'js', html: 'html', css: 'css', json: 'json', cpp: 'cpp', c: 'c', java: 'java', typescript: 'ts' };
+    if (extMap[lang]) ext = extMap[lang];
+
+    if (codeEl) {
+        const blob = new Blob([codeEl.innerText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `doxa_snippet_${Date.now()}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast(`Downloaded code snippet as .${ext}`);
+    }
+};
 
 // --- Unified Message Sending Pipeline ---
 async function sendMessage() {
@@ -344,6 +444,10 @@ async function sendMessage() {
 
     const userContentEl = userMsgDiv.querySelector('.message-content');
     makeCollapsible(userMsgDiv, userContentEl);
+    
+    if (typeof attachUserMessageActions === 'function') {
+        attachUserMessageActions(userRowWrapper);
+    }
 
     textInput.value = '';
     textInput.style.height = 'auto';
@@ -356,15 +460,23 @@ async function sendMessage() {
 
     const aiMsgDiv = document.createElement('div');
     aiMsgDiv.className = 'ai-message';
-    aiMsgDiv.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Doxa AI is thinking...</p>`;
+    aiMsgDiv.innerHTML = `
+        <div class="tiny-thinking-container">
+            <span class="tiny-dot dot-1"></span>
+            <span class="tiny-dot dot-2"></span>
+            <span class="tiny-dot dot-3"></span>
+            <span class="ai-thinking-text" style="margin-left: 6px;">Doxa AI is processing response</span>
+        </div>
+    `;
     
     aiRowWrapper.appendChild(aiMsgDiv);
     chatContainer.appendChild(aiRowWrapper);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
-    // Standard Text Streaming Pipeline
     try {
-        const response = await fetch('/chat', {
+        const endpoint = (currentAiMode === 'openai') ? '/api/openai-chat' : '/chat';
+
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ history: currentChatHistory, mode: currentAiMode })
@@ -385,26 +497,65 @@ async function sendMessage() {
             const chunk = decoder.decode(value, { stream: true });
             aiResponseText += chunk;
             
-            aiMsgDiv.innerHTML = `<div class="message-content">${window.marked ? marked.parse(aiResponseText) : aiResponseText}</div>`;
+            const imageTagMatch = aiResponseText.match(/\[GENERATE_IMAGE:\s*(.*?)\]/);
+            
+            if (imageTagMatch) {
+                const imagePrompt = imageTagMatch[1].trim();
+                const cleanedText = aiResponseText.replace(imageTagMatch[0], "").trim();
+                
+                aiMsgDiv.innerHTML = `
+                    <div class="message-content">
+                        ${cleanedText ? `<p>${window.marked ? marked.parse(cleanedText) : cleanedText}</p>` : ''}
+                        <p><em>Generating image: "${imagePrompt}" 🎨...</em></p>
+                    </div>
+                `;
+                
+                try {
+                    const imgResponse = await fetch('/generate-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: imagePrompt })
+                    });
+                    const imgData = await imgResponse.json();
+                    
+                    if (imgData.success) {
+                        aiMsgDiv.innerHTML = `
+                            <div class="message-content">
+                                ${cleanedText ? `<p>${window.marked ? marked.parse(cleanedText) : cleanedText}</p>` : ''}
+                                <p>${imgData.response_text}</p>
+                                <img src="${imgData.image_url}" alt="${imagePrompt}" style="max-width: 100%; border-radius: 8px; margin-top: 8px;" />
+                            </div>
+                        `;
+                        aiResponseText = cleanedText + `\n\n${imgData.response_text}\n\n![Generated Image](${imgData.image_url})`;
+                    }
+                } catch (imgErr) {
+                    console.error("Context Image Gen Error:", imgErr);
+                }
+                break;
+            } else {
+                aiMsgDiv.innerHTML = `<div class="message-content">${window.marked ? marked.parse(aiResponseText) : aiResponseText}</div>`;
+            }
+            
+            if (window.hljs) {
+                aiMsgDiv.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+            }
+            enhanceCodeBlocks(aiMsgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         currentChatHistory.push({ "role": "model", "parts": [{ "text": aiResponseText }] });
         saveStorage();
 
-        const finalContentEl = aiMsgDiv.querySelector('.message-content');
-        makeCollapsible(aiMsgDiv, finalContentEl);
-
         if (window.hljs) {
-            document.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+            aiMsgDiv.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
         }
+        enhanceCodeBlocks(aiMsgDiv);
     } catch (err) {
         console.error("Error:", err);
         aiMsgDiv.innerHTML = `<span style="color: #ff6b6b;">[Connection Error: Failed to reach backend generator.]</span>`;
         return;
     }
 
-    // Append action buttons bar
     const actionButtonsBar = document.createElement('div');
     actionButtonsBar.className = 'message-actions';
     actionButtonsBar.innerHTML = `
@@ -465,7 +616,6 @@ function restoreUIState() {
                 msgDiv.innerHTML = `<div class="message-content">${window.marked ? marked.parse(msg.parts[0].text) : msg.parts[0].text}</div>`;
                 rowWrapper.appendChild(msgDiv);
                 
-                // Action buttons bar preserved ONLY for AI responses
                 const actionButtonsBar = document.createElement('div');
                 actionButtonsBar.className = 'message-actions';
                 actionButtonsBar.innerHTML = `
@@ -484,18 +634,25 @@ function restoreUIState() {
                 } else {
                     userText = msg.parts[0].text;
                 }
-                msgDiv.innerText = userText;
+                msgDiv.innerHTML = `<div class="message-content">${userText}</div>`;
                 rowWrapper.appendChild(msgDiv);
-                // No action buttons or extra components attached to user rows
+                const userContent = msgDiv.querySelector('.message-content');
+                if (userContent) makeCollapsible(msgDiv, userContent);
             }
             chatContainer.appendChild(rowWrapper);
         });
+
+        if (window.hljs) {
+            chatContainer.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+        }
+        enhanceCodeBlocks(chatContainer);
 
         setTimeout(() => {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }, 50);
     }
 }
+
 function resetChat() {
     currentChatId = Date.now();
     isFirstMessage = true;
@@ -524,10 +681,10 @@ function resetChat() {
 }
 
 function saveStorage() {
-    localStorage.setItem(storagePrefix + 'chat_histories', JSON.stringify(chatHistories));
-    localStorage.setItem(storagePrefix + 'current_chat_id', currentChatId);
-    localStorage.setItem(storagePrefix + `conv_${currentChatId}`, JSON.stringify(currentChatHistory));
-    localStorage.setItem(storagePrefix + `is_first_${currentChatId}`, isFirstMessage);
+    activeStorage.setItem(storagePrefix + 'chat_histories', JSON.stringify(chatHistories));
+    activeStorage.setItem(storagePrefix + 'current_chat_id', currentChatId);
+    activeStorage.setItem(storagePrefix + `conv_${currentChatId}`, JSON.stringify(currentChatHistory));
+    activeStorage.setItem(storagePrefix + `is_first_${currentChatId}`, isFirstMessage);
 }
 
 async function saveChatToServer(chatId, title, messages) {
@@ -581,8 +738,8 @@ function renderSidebarHistory() {
             deleteBtn.onclick = (e) => {
                 e.stopPropagation();
                 chatHistories = chatHistories.filter(h => h.id !== item.id);
-                localStorage.removeItem(storagePrefix + `conv_${item.id}`);
-                localStorage.removeItem(storagePrefix + `is_first_${item.id}`);
+                activeStorage.removeItem(storagePrefix + `conv_${item.id}`);
+                activeStorage.removeItem(storagePrefix + `is_first_${item.id}`);
                 saveStorage();
                 renderSidebarHistory();
                 if (currentChatId === item.id) resetChat();
@@ -591,7 +748,7 @@ function renderSidebarHistory() {
 
         histDiv.onclick = () => {
             currentChatId = item.id;
-            currentChatHistory = JSON.parse(localStorage.getItem(storagePrefix + `conv_${currentChatId}`) || '[{"role": "model", "parts": [{"text": "Doxa AI core is online. How can I assist you today?"}]}]');
+            currentChatHistory = JSON.parse(activeStorage.getItem(storagePrefix + `conv_${currentChatId}`) || '[{"role": "model", "parts": [{"text": "Doxa AI core is online. How can I assist you today?"}]}]');
             isFirstMessage = false;
             saveStorage();
             renderSidebarHistory();
@@ -613,3 +770,260 @@ window.toggleSidebarWithSpin = function(element) {
         }, 600);
     }
 }
+
+// --- User Message Actions Enhancement ---
+function attachUserMessageActions(messageRow) {
+    if (messageRow.dataset.actionsEnhanced) return;
+    messageRow.dataset.actionsEnhanced = 'true';
+
+    const userMsg = messageRow.querySelector('.user-message');
+    if (!userMsg) return;
+
+    if (messageRow.querySelector('.user-message-actions')) return;
+
+    const actionsContainer = document.createElement('div');
+    actionsContainer.className = 'user-message-actions';
+    actionsContainer.innerHTML = `
+        <button class="user-action-btn" onclick="copyUserMessage(this)" title="Copy text">
+            <span class="material-icons-outlined">content_copy</span>
+        </button>
+        <button class="user-action-btn" onclick="enableMessageEdit(this)" title="Edit text">
+            <span class="material-icons-outlined">edit</span>
+        </button>
+    `;
+    messageRow.appendChild(actionsContainer);
+}
+
+function refreshAllUserMessageActions() {
+    document.querySelectorAll('.user-row').forEach(row => {
+        attachUserMessageActions(row);
+    });
+}
+
+const originalRestoreUIState = window.restoreUIState;
+window.restoreUIState = function() {
+    if (typeof originalRestoreUIState === 'function') originalRestoreUIState();
+    setTimeout(refreshAllUserMessageActions, 50);
+};
+
+document.addEventListener('DOMContentLoaded', refreshAllUserMessageActions);
+
+window.copyUserMessage = function(btn) {
+    const row = btn.closest('.user-row');
+    const contentEl = row.querySelector('.message-content') || row.querySelector('.user-message');
+    if (contentEl) {
+        navigator.clipboard.writeText(contentEl.innerText);
+        const iconSpan = btn.querySelector('.material-icons-outlined');
+        const originalIcon = iconSpan.innerText;
+        iconSpan.innerText = 'check';
+        setTimeout(() => {
+            iconSpan.innerText = originalIcon;
+        }, 2000);
+    }
+};
+
+window.enableMessageEdit = function(btn) {
+    const row = btn.closest('.user-row');
+    const userMsg = row.querySelector('.user-message');
+    const contentEl = row.querySelector('.message-content') || userMsg;
+    
+    if (userMsg.classList.contains('editing')) return;
+
+    const originalText = contentEl.innerText;
+    userMsg.classList.add('editing');
+    
+    userMsg.innerHTML = `
+        <textarea class="edit-textarea">${originalText}</textarea>
+        <div class="edit-actions-bar">
+            <button class="edit-cancel-btn" type="button" onclick="cancelMessageEdit(this, \`${originalText.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)">Cancel</button>
+            <button class="edit-update-btn" type="button" onclick="submitMessageEdit(this)">Update</button>
+        </div>
+    `;
+    
+    const textarea = userMsg.querySelector('textarea');
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    
+    textarea.style.height = 'auto';
+    textarea.style.height = (textarea.scrollHeight) + 'px';
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+};
+
+window.cancelMessageEdit = function(btn, originalText) {
+    const userMsg = btn.closest('.user-message');
+    userMsg.classList.remove('editing');
+    userMsg.innerHTML = `<div class="message-content">${originalText}</div>`;
+};
+
+window.submitMessageEdit = function(btn) {
+    const userMsg = btn.closest('.user-message');
+    const textarea = userMsg.querySelector('textarea');
+    if (!textarea) return;
+    
+    const newText = textarea.value.trim();
+    if (!newText) {
+        showToast("Message cannot be empty.");
+        return;
+    }
+
+    const row = userMsg.closest('.user-row');
+    const allUserRows = Array.from(chatContainer.querySelectorAll('.user-row'));
+    const messageIndex = allUserRows.indexOf(row);
+
+    if (messageIndex === -1) return;
+
+    let historyUserCount = 0;
+    let targetHistoryIndex = -1;
+    
+    for (let i = 0; i < currentChatHistory.length; i++) {
+        if (currentChatHistory[i].role === 'user') {
+            if (historyUserCount === messageIndex) {
+                targetHistoryIndex = i;
+                break;
+            }
+            historyUserCount++;
+        }
+    }
+
+    if (targetHistoryIndex === -1) return;
+
+    currentChatHistory = currentChatHistory.slice(0, targetHistoryIndex);
+    currentChatHistory.push({ "role": "user", "parts": [{ "text": newText }] });
+    
+    let nextEl = row.nextElementSibling;
+    while (nextEl) {
+        const toRemove = nextEl;
+        nextEl = nextEl.nextElementSibling;
+        toRemove.remove();
+    }
+    row.remove();
+
+    saveStorage();
+    triggerEditedMessageFlow(newText);
+};
+
+async function triggerEditedMessageFlow(text) {
+    const userRowWrapper = document.createElement('div');
+    userRowWrapper.className = 'message-row user-row';
+
+    const userMsgDiv = document.createElement('div');
+    userMsgDiv.className = 'user-message';
+    userMsgDiv.innerHTML = `<div class="message-content">${text}</div>`;
+    userRowWrapper.appendChild(userMsgDiv);
+    chatContainer.appendChild(userRowWrapper);
+
+    const userContentEl = userMsgDiv.querySelector('.message-content');
+    makeCollapsible(userMsgDiv, userContentEl);
+    attachUserMessageActions(userRowWrapper);
+
+    const aiRowWrapper = document.createElement('div');
+    aiRowWrapper.className = 'message-row ai-row';
+
+    const aiMsgDiv = document.createElement('div');
+    aiMsgDiv.className = 'ai-message';
+    aiMsgDiv.innerHTML = `
+        <div class="tiny-thinking-container">
+            <span class="tiny-dot dot-1"></span>
+            <span class="tiny-dot dot-2"></span>
+            <span class="tiny-dot dot-3"></span>
+            <span class="ai-thinking-text" style="margin-left: 6px;">Doxa AI is processing response</span>
+        </div>
+    `;
+    
+    aiRowWrapper.appendChild(aiMsgDiv);
+    chatContainer.appendChild(aiRowWrapper);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    try {
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ history: currentChatHistory, mode: currentAiMode })
+        });
+
+        if (!response.ok) throw new Error("Server communication fault");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let aiResponseText = "";
+
+        aiMsgDiv.innerHTML = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            aiResponseText += chunk;
+            
+            aiMsgDiv.innerHTML = `<div class="message-content">${window.marked ? marked.parse(aiResponseText) : aiResponseText}</div>`;
+            
+            if (window.hljs) {
+                aiMsgDiv.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+            }
+            enhanceCodeBlocks(aiMsgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        currentChatHistory.push({ "role": "model", "parts": [{ "text": aiResponseText }] });
+        saveStorage();
+
+        if (window.hljs) {
+            aiMsgDiv.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+        }
+        enhanceCodeBlocks(aiMsgDiv);
+    } catch (err) {
+        console.error("Error:", err);
+        aiMsgDiv.innerHTML = `<span style="color: #ff6b6b;">[Connection Error: Failed to reach backend generator.]</span>`;
+        return;
+    }
+
+    const actionButtonsBar = document.createElement('div');
+    actionButtonsBar.className = 'message-actions';
+    actionButtonsBar.innerHTML = `
+        <button class="action-btn" onclick="copyMessage(this)" title="Copy text">
+            <span class="material-icons-outlined" style="font-size: 16px;">content_copy</span>
+        </button>
+        <button class="action-btn" onclick="regenerateMessage()" title="Regenerate">
+            <span class="material-icons-outlined" style="font-size: 16px;">refresh</span>
+        </button>
+    `;
+    aiRowWrapper.appendChild(actionButtonsBar);
+
+    const activeTitle = chatHistories.find(h => h.id === currentChatId)?.title || 'New Chat';
+    saveChatToServer(currentChatId, activeTitle, currentChatHistory);
+    
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// --- Dedicated Logout Handler for Guests ---
+window.triggerLogout = function() {
+    if (isGuestUser) {
+        const guestTabId = sessionStorage.getItem("doxa_guest_tab_id");
+        if (guestTabId) {
+            Object.keys(sessionStorage).forEach(key => {
+                if (key.includes(guestTabId)) {
+                    sessionStorage.removeItem(key);
+                }
+            });
+            sessionStorage.removeItem("doxa_guest_tab_id");
+        }
+    }
+    window.location.href = "/logout";
+};
+
+// --- Additional Utilities ---
+const shimmerStyle = document.createElement('style');
+shimmerStyle.innerHTML = `
+    @keyframes gemini-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    .doxa-image-wrapper img.loaded {
+        display: block !important;
+    }
+`;
+document.head.appendChild(shimmerStyle);
