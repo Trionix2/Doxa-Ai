@@ -158,7 +158,12 @@ body {
     align-items: center;
     justify-content: space-between;
     background-color: var(--bg-sidebar);
+    
+    /* Mobile viewport & overflow safety */
     margin-top: auto;
+    flex-shrink: 0;
+    position: relative;
+    width: 100%;
 }
 
 .user-profile-info {
