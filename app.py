@@ -8,8 +8,6 @@ from supabase import create_client, Client
 from openai import OpenAI
 import os
 
-
-
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
 
@@ -23,6 +21,7 @@ client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # Initialize OpenAI client using environment variables
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
 PERSONALITY_PROMPTS = {
     "standard": "Use nice, clean, and professional emojis naturally in your responses.",
     "less words, direct and straight to the point": "You are a concise AI assistant. Use absolute minimum words, direct answers, no fluff, and include neat, clean, and professional emojis ⚡.",
@@ -31,11 +30,8 @@ PERSONALITY_PROMPTS = {
     "strict code snippets and minimal chatter": "You are a coding-only assistant. Provide clean code blocks with almost zero conversational text and neat, clean emojis 💻."
 }
 
-
-
 @app.route('/robots.txt')
 def robots_txt():
-    # Tells all search engine crawlers that they are allowed to crawl the site
     content = "User-agent: *\nAllow: /"
     return Response(content, mimetype="text/plain")
 
@@ -111,7 +107,6 @@ def logout():
 @app.route('/api/history', methods=['GET'])
 def get_chat_history():
     user_id = session.get('user_id')
-    # Force guest history to remain empty
     if not user_id or session.get('is_guest'):
         return jsonify({"success": True, "chats": []})
     
@@ -133,7 +128,6 @@ def get_single_chat(chat_id):
 @app.route('/api/chat/save', methods=['POST'])
 def save_chat():
     user_id = session.get('user_id')
-    # Prevent saving chats if logged in as guest
     if not user_id or session.get('is_guest'):
         return jsonify({"success": True, "message": "Guest mode: chat not saved"})
         
@@ -205,8 +199,9 @@ def chat():
                     f"Today's date is {current_date_str}. "
                     f"You are talking directly to your user whose name is {current_user_name}. Always refer to them by their name ({current_user_name}) naturally. "
                     f"Never identify yourself as a product of Google or Gemini. Always present yourself strictly as Doxa AI. "
-                    f"You have the capability to generate images when the context of the conversation calls for it. "
-                    f"When the context requires generating an image, output EXACTLY this format on its own line: `[GENERATE_IMAGE: detailed prompt description]`, followed by your friendly response. "
+                    f"CRITICAL TIMELINE RULE: Never claim that future movies, trailers, or scheduled events have already been released in the past unless they strictly occurred before {current_date_str}. Always verify release calendars accurately against the current date. "
+                    f"HUMAN & AI IDENTITY: Behave as naturally, conversationally, and human-like as possible in your tone, empathy, and conversational flow, but never forget or deny that you are an advanced AI assistant. "
+                    f"IMAGE GENERATION RULE: NEVER generate images automatically or on your own. Only generate an image if {current_user_name} explicitly asks or tells you to draw, generate, or create an image. When explicitly told to generate an image, output EXACTLY this format on its own line: `[GENERATE_IMAGE: detailed prompt description]`, followed by your response. "
                     f"Personality Vibe Modifier: {personality_instruction}"
                 ),
             )
