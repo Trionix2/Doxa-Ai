@@ -18,7 +18,6 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '17'
-        cache: 'gradle'
 
     - name: Grant Gradle Execution Permissions
       run: chmod +x gradlew
