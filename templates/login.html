@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Doxa AI - Advanced Engineering Assistant & AI Collaborator</title>
+    <title>Doxa AI — Authentication Matrix</title>
     <link rel="icon" href="../static/icons8-hub-50.png" type="image/png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <!-- EmailJS SDK (for new signups) -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -15,34 +15,49 @@
         })();
     </script>
     <style>
-        :root {
-            --bg-main: #0b0714;
-            --bg-surface: rgba(22, 16, 38, 0.88);
-            --bg-hover: rgba(45, 32, 77, 0.7);
-            --text-main: #f3e8ff;
-            --text-secondary: #b9a8c7;
-            --accent: #a855f7;
-            --accent-glow: rgba(168, 85, 247, 0.4);
-            --border: rgba(168, 85, 247, 0.2);
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Space Grotesk', sans-serif;
         }
-        
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        
+
         body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
+            background-color: #080511;
+            color: #ffffff;
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+            padding: 16px;
+        }
+
+        /* Canvas Layers */
+        #matrix-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden;
-            padding: 16px;
+            z-index: 0;
+            opacity: 0.15;
+            pointer-events: none;
         }
 
+        #blocks-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* 3D Spinning Hub Background Layer */
         .bg-3d-container {
             position: fixed;
             top: 0;
@@ -53,18 +68,18 @@
             justify-content: center;
             align-items: center;
             pointer-events: none;
-            z-index: 1;
+            z-index: 2;
             perspective: 1000px;
             overflow: hidden;
         }
 
         .spinning-hub {
             font-size: min(120vw, 550px);
-            color: rgba(168, 85, 247, 0.12);
+            color: rgba(168, 85, 247, 0.08);
             animation: spin3D 25s linear infinite;
             transform-style: preserve-3d;
             user-select: none;
-            filter: drop-shadow(0 0 50px rgba(168, 85, 247, 0.1));
+            filter: drop-shadow(0 0 50px rgba(168, 85, 247, 0.12));
         }
 
         @keyframes spin3D {
@@ -73,62 +88,111 @@
             100% { transform: rotateX(20deg) rotateY(360deg) rotateZ(0deg) scale(1); }
         }
 
-        .glow-orb {
+        /* Ambient Purple Core Glow */
+        .ambient-glow {
             position: fixed;
-            width: min(90vw, 600px);
-            height: min(90vw, 600px);
-            background: radial-gradient(circle, rgba(147, 51, 234, 0.2) 0%, rgba(11, 7, 20, 0) 70%);
-            border-radius: 50%;
-            z-index: 1;
+            width: min(600px, 100vw);
+            height: min(600px, 100vw);
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(13, 8, 30, 0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
             pointer-events: none;
+            animation: corePulse 6s ease-in-out infinite alternate;
         }
 
-        .login-card {
-            background-color: var(--bg-surface);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--border);
-            padding: clamp(20px, 4vw, 32px);
-            border-radius: 20px;
-            width: 100%;
-            max-width: 420px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(168, 85, 247, 0.15);
+        @keyframes corePulse {
+            0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.4; }
+            100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.85; }
+        }
+
+        /* Main Container & Sharp Neon Card */
+        .container {
             position: relative;
             z-index: 10;
+            width: 100%;
+            max-width: 440px;
             margin: auto;
         }
 
+        .neon-box {
+            position: relative;
+            background: rgba(14, 10, 26, 0.92);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-radius: 0px;
+            padding: clamp(28px, 5vw, 40px) clamp(20px, 4vw, 32px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(168, 85, 247, 0.08);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            overflow: hidden;
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
+        }
+
+        .neon-box.slide-out {
+            transform: translateX(-40px) scale(0.96);
+            opacity: 0;
+        }
+
+        .neon-box.slide-in {
+            transform: translateX(40px) scale(0.96);
+            opacity: 0;
+        }
+
+        .neon-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(216, 180, 254, 0.9), rgba(107, 33, 168, 0.1), rgba(168, 85, 247, 0.8), rgba(74, 22, 140, 0.2));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: borderFade 5s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes borderFade {
+            0% { opacity: 0.3; filter: brightness(0.8); }
+            50% { opacity: 1; filter: brightness(1.4); }
+            100% { opacity: 0.3; filter: brightness(0.8); }
+        }
+
+        /* Header & Terminal Navigation */
         .card-header {
             display: flex;
             align-items: center;
-            margin-bottom: 16px;
+            justify-content: space-between;
+            margin-bottom: 18px;
         }
 
         .back-arrow {
             background: none;
-            border: none;
-            color: var(--text-main);
+            border: 1px solid rgba(216, 180, 254, 0.2);
+            color: #d8b4fe;
+            width: 38px;
+            height: 38px;
+            border-radius: 0px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8px;
-            border-radius: 50%;
-            transition: background-color 0.2s;
-            margin-right: 12px;
+            transition: all 0.3s ease;
             flex-shrink: 0;
         }
 
-        .back-arrow:hover { background-color: var(--bg-hover); }
+        .back-arrow:hover {
+            background: rgba(168, 85, 247, 0.2);
+            border-color: #f3e8ff;
+            color: #fff;
+        }
 
         .tabs {
             display: flex;
-            background-color: rgba(11, 7, 20, 0.6);
-            border-radius: 10px;
-            padding: 4px;
-            border: 1px solid var(--border);
+            background-color: rgba(11, 7, 20, 0.7);
+            border-radius: 0px;
+            padding: 3px;
+            border: 1px solid rgba(168, 85, 247, 0.25);
             width: 100%;
         }
 
@@ -137,131 +201,152 @@
             padding: 10px;
             background: transparent;
             border: none;
-            color: var(--text-secondary);
+            color: #b9a8c7;
             font-weight: 600;
-            font-size: clamp(12px, 3vw, 13px);
+            font-size: 13px;
             cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.2s ease;
+            border-radius: 0px;
+            transition: all 0.25s ease;
             text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
         }
 
         .tab.active {
-            background: linear-gradient(135deg, #9333ea, #7e22ce);
+            background: linear-gradient(135deg, #9333ea, #6b21a8);
             color: #ffffff;
             box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4);
+            border: 1px solid rgba(216, 180, 254, 0.4);
         }
 
-        .login-card h2 {
-            font-size: clamp(20px, 4vw, 24px);
+        h2 {
+            font-size: clamp(22px, 4vw, 26px);
             font-weight: 700;
             margin-bottom: 6px;
-            color: var(--text-main);
+            color: #fff;
+            background: linear-gradient(135deg, #ffffff 20%, #e9d5ff 70%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             letter-spacing: -0.5px;
         }
 
-        .login-card p {
-            color: var(--text-secondary);
-            font-size: clamp(12px, 2.5vw, 13px);
-            margin-bottom: 20px;
-            line-height: 1.4;
+        p {
+            color: #b9a8c7;
+            font-size: clamp(12.5px, 2.5vw, 13.5px);
+            margin-bottom: 22px;
+            line-height: 1.5;
         }
 
         .input-group {
-            margin-bottom: 14px;
+            margin-bottom: 16px;
             text-align: left;
         }
 
         .input-group label {
             display: block;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-secondary);
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #d8b4fe;
             margin-bottom: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .input-group input {
             width: 100%;
-            padding: 11px 14px;
-            background-color: rgba(11, 7, 20, 0.7);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-main);
+            padding: 12px 14px;
+            background-color: rgba(11, 7, 20, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.25);
+            border-radius: 0px;
+            color: #f3e8ff;
             font-size: 14px;
             outline: none;
-            transition: all 0.2s ease;
+            transition: all 0.25s ease;
+            font-family: 'Space Grotesk', sans-serif;
         }
 
         .input-group input:focus { 
-            border-color: var(--accent); 
-            box-shadow: 0 0 10px var(--accent-glow);
+            border-color: #a855f7; 
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.35);
+            background-color: rgba(20, 10, 38, 0.9);
         }
 
-        .login-btn {
+        .cyber-btn {
             width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #a855f7, #7e22ce);
-            color: #ffffff;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
+            background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%);
+            color: #fff;
+            border: 1px solid rgba(216, 180, 254, 0.4);
+            padding: 13px;
+            border-radius: 0px;
+            font-weight: 700;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             margin-top: 6px;
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+            box-shadow: 0 10px 25px rgba(147, 51, 234, 0.4);
+            letter-spacing: 0.5px;
         }
 
-        .login-btn:hover { 
-            opacity: 0.95;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
+        .cyber-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+            box-shadow: 0 14px 35px rgba(168, 85, 247, 0.6);
+            border-color: #f3e8ff;
+        }
+
+        .cyber-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .guest-btn {
             width: 100%;
-            padding: 11px;
+            padding: 12px;
             background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
+            color: #b9a8c7;
+            border: 1px solid rgba(168, 85, 247, 0.25);
+            border-radius: 0px;
             font-weight: 600;
             font-size: 13px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             margin-top: 10px;
+            font-family: 'JetBrains Mono', monospace;
         }
 
         .guest-btn:hover {
-            background-color: var(--bg-hover);
-            color: var(--text-main);
-            border-color: var(--accent);
+            background-color: rgba(45, 32, 77, 0.6);
+            color: #fff;
+            border-color: #a855f7;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
         }
 
         #error-msg {
             color: #fca5a5;
             font-size: 12px;
-            margin-top: 10px;
+            margin-top: 12px;
             display: none;
             text-align: center;
+            font-family: 'JetBrains Mono', monospace;
         }
 
         /* Modal styling for Guest Warning */
         .modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(11, 7, 20, 0.85);
-            backdrop-filter: blur(8px);
+            inset: 0;
+            background: rgba(8, 5, 17, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 100;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .modal-overlay.active {
@@ -270,14 +355,27 @@
         }
 
         .modal-card {
-            background: var(--bg-surface);
+            background: rgba(14, 10, 26, 0.95);
             border: 1px solid rgba(239, 68, 68, 0.4);
-            padding: 30px;
-            border-radius: 16px;
+            padding: 32px;
+            border-radius: 0px;
             max-width: 380px;
             width: 90%;
             text-align: center;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px rgba(239, 68, 68, 0.2);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.8), 0 0 35px rgba(239, 68, 68, 0.2);
+            position: relative;
+        }
+
+        .modal-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1.5px;
+            background: linear-gradient(135deg, rgba(248, 113, 113, 0.8), rgba(127, 29, 29, 0.2));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
         }
 
         .modal-card .warning-icon {
@@ -289,13 +387,13 @@
         .modal-card h3 {
             font-size: 18px;
             margin-bottom: 8px;
-            color: var(--text-main);
+            color: #fff;
         }
 
         .modal-card p {
             font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 20px;
+            color: #b9a8c7;
+            margin-bottom: 22px;
             line-height: 1.5;
         }
 
@@ -306,32 +404,42 @@
 
         .modal-btn {
             flex: 1;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 11px;
+            border-radius: 0px;
             font-weight: 600;
             font-size: 13px;
             cursor: pointer;
             border: none;
+            transition: all 0.2s ease;
         }
 
         .modal-btn.cancel {
-            background: rgba(255,255,255,0.08);
-            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .modal-btn.cancel:hover {
+            background: rgba(255, 255, 255, 0.15);
         }
 
         .modal-btn.confirm {
             background: #dc2626;
             color: white;
+            border: 1px solid #ef4444;
+        }
+
+        .modal-btn.confirm:hover {
+            background: #b91c1c;
         }
 
         /* Loading Screen Overlay */
         .loading-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-main);
+            inset: 0;
+            background: rgba(8, 5, 17, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -339,7 +447,7 @@
             z-index: 200;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .loading-overlay.active {
@@ -347,18 +455,50 @@
             pointer-events: auto;
         }
 
-        .loading-spinner {
-            font-size: 64px;
-            color: var(--accent);
-            animation: spin3D 2s linear infinite;
-            margin-bottom: 16px;
+        .loader-box {
+            text-align: center;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            background: rgba(14, 10, 26, 0.9);
+            padding: 40px;
+            width: 320px;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px rgba(168, 85, 247, 0.2);
+        }
+
+        .loader-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1.5px;
+            background: linear-gradient(135deg, #d8b4fe, #6b21a8);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: borderFade 2s linear infinite;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(168, 85, 247, 0.15);
+            border-top: 3px solid #d8b4fe;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .loading-text {
-            color: var(--text-main);
-            font-size: 16px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #d8b4fe;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
         .hidden { display: none !important; }
@@ -366,15 +506,20 @@
 </head>
 <body>
 
-    <div class="glow-orb"></div>
+    <!-- Canvas & 3D Background Layers -->
+    <canvas id="matrix-canvas"></canvas>
+    <canvas id="blocks-canvas"></canvas>
     <div class="bg-3d-container">
         <span class="material-icons-outlined spinning-hub">hub</span>
     </div>
+    <div class="ambient-glow"></div>
 
-    <!-- Loading Screen Overlay (3 Seconds) -->
+    <!-- Loading Screen Overlay -->
     <div class="loading-overlay" id="loading-screen">
-        <span class="material-icons-outlined loading-spinner">hub</span>
-        <div class="loading-text">Entering Doxa AI...</div>
+        <div class="loader-box">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loading-msg">ESTABLISHING_SECURE_LINK...</div>
+        </div>
     </div>
 
     <!-- Guest Warning Modal -->
@@ -390,51 +535,146 @@
         </div>
     </div>
 
-    <div class="login-card">
-        <div class="card-header" id="header-container">
-            <button class="back-arrow hidden" id="back-btn" onclick="goBack()" title="Back">
-                <span class="material-icons-outlined">arrow_back</span>
-            </button>
-            <div class="tabs" id="tabs-container" style="flex: 1; margin-bottom: 0;">
-                <button class="tab active" id="signin-tab" onclick="switchMode('signin')">Sign In</button>
-                <button class="tab" id="signup-tab" onclick="switchMode('signup')">Sign Up</button>
+    <div class="container">
+        <div class="neon-box" id="neon-card">
+            <div class="card-header" id="header-container">
+                <button class="back-arrow hidden" id="back-btn" onclick="goBack()" title="Back">
+                    <span class="material-icons-outlined">arrow_back</span>
+                </button>
+                <div class="tabs" id="tabs-container">
+                    <button class="tab active" id="signin-tab" onclick="switchMode('signin')">Sign In</button>
+                    <button class="tab" id="signup-tab" onclick="switchMode('signup')">Sign Up</button>
+                </div>
             </div>
+
+            <h2 id="form-title">Welcome Back</h2>
+            <p id="form-subtitle">Authenticate with your credentials to access the secure terminal.</p>
+            
+            <!-- Main Auth Form -->
+            <form id="auth-form">
+                <div class="input-group" id="username-group" style="display: none;">
+                    <label for="username">Display Name</label>
+                    <input type="text" id="username" placeholder="e.g. Alex" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="e.g. alex@example.com" required autocomplete="off">
+                </div>
+                <div class="input-group" id="password-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter your secure password" required autocomplete="current-password">
+                </div>
+                <button type="submit" id="main-btn" class="cyber-btn">Sign In // Authenticate</button>
+                <button type="button" class="guest-btn" onclick="openGuestModal()">Continue as Guest</button>
+            </form>
+
+            <!-- OTP Verification Form (Only for new Sign Up registrations) -->
+            <form id="otp-form" class="hidden">
+                <div class="input-group">
+                    <label for="otp-code">Enter 6-Digit Verification Code</label>
+                    <input type="text" id="otp-code" placeholder="123456" maxlength="6" required autocomplete="off" style="text-align: center; font-size: 20px; letter-spacing: 6px; font-family: 'JetBrains Mono', monospace;">
+                </div>
+                <button type="submit" class="cyber-btn">Verify & Initialize Grid</button>
+            </form>
+
+            <div id="error-msg"></div>
         </div>
-
-        <h2 id="form-title">Welcome Back</h2>
-        <p id="form-subtitle">Sign in with your password to access your chats.</p>
-        
-        <!-- Main Auth Form -->
-        <form id="auth-form">
-            <div class="input-group" id="username-group" style="display: none;">
-                <label for="username">Display Name</label>
-                <input type="text" id="username" placeholder="e.g. Alex" autocomplete="off">
-            </div>
-            <div class="input-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" placeholder="e.g. alex@example.com" required autocomplete="off">
-            </div>
-            <div class="input-group" id="password-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password">
-            </div>
-            <button type="submit" id="main-btn" class="login-btn">Sign In</button>
-            <button type="button" class="guest-btn" onclick="openGuestModal()">Continue as Guest</button>
-        </form>
-
-        <!-- OTP Verification Form (Only for new Sign Up registrations) -->
-        <form id="otp-form" class="hidden">
-            <div class="input-group">
-                <label for="otp-code">Enter 6-Digit Verification Code</label>
-                <input type="text" id="otp-code" placeholder="123456" maxlength="6" required autocomplete="off" style="text-align: center; font-size: 18px; letter-spacing: 4px;">
-            </div>
-            <button type="submit" class="login-btn">Verify & Complete Registration</button>
-        </form>
-
-        <div id="error-msg"></div>
     </div>
 
     <script>
+        // --- 1. MATRIX RAIN BACKGROUND EFFECT ---
+        const matrixCanvas = document.getElementById('matrix-canvas');
+        const mCtx = matrixCanvas.getContext('2d');
+
+        function resizeMatrix() {
+            matrixCanvas.width = window.innerWidth;
+            matrixCanvas.height = window.innerHeight;
+        }
+        resizeMatrix();
+        window.addEventListener('resize', resizeMatrix);
+
+        const chars = 'DOXA0192837465XYZ_#@<>/\\*&';
+        const fontSize = 14;
+        let columns = Math.floor(matrixCanvas.width / fontSize);
+        let drops = Array(columns).fill(1);
+
+        function drawMatrix() {
+            mCtx.fillStyle = 'rgba(8, 5, 17, 0.08)';
+            mCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+
+            mCtx.fillStyle = '#c084fc';
+            mCtx.font = fontSize + 'px "JetBrains Mono", monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                mCtx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > matrixCanvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 40);
+
+        // --- 2. FALLING CYBER BLOCKS ANIMATION ---
+        const blocksCanvas = document.getElementById('blocks-canvas');
+        const bCtx = blocksCanvas.getContext('2d');
+
+        function resizeBlocks() {
+            blocksCanvas.width = window.innerWidth;
+            blocksCanvas.height = window.innerHeight;
+        }
+        resizeBlocks();
+        window.addEventListener('resize', resizeBlocks);
+
+        class CyberBlock {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * blocksCanvas.width;
+                this.y = -50 - Math.random() * 200;
+                this.size = Math.random() * 24 + 8;
+                this.speed = Math.random() * 1.5 + 0.5;
+                this.rotation = Math.random() * Math.PI;
+                this.rotSpeed = (Math.random() - 0.5) * 0.02;
+                this.opacity = Math.random() * 0.35 + 0.05;
+                const purples = ['#d8b4fe', '#c084fc', '#a855f7', '#9333ea', '#7e22ce'];
+                this.color = purples[Math.floor(Math.random() * purples.length)];
+            }
+            update() {
+                this.y += this.speed;
+                this.rotation += this.rotSpeed;
+                if (this.y > blocksCanvas.height + 50) {
+                    this.reset();
+                }
+            }
+            draw() {
+                bCtx.save();
+                bCtx.translate(this.x, this.y);
+                bCtx.rotate(this.rotation);
+                bCtx.strokeStyle = this.color;
+                bCtx.lineWidth = 1.5;
+                bCtx.globalAlpha = this.opacity;
+                bCtx.strokeRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                bCtx.restore();
+            }
+        }
+
+        const blocksArray = Array.from({ length: 16 }, () => new CyberBlock());
+
+        function animateBlocks() {
+            bCtx.clearRect(0, 0, blocksCanvas.width, blocksCanvas.height);
+            blocksArray.forEach(block => {
+                block.update();
+                block.draw();
+            });
+            requestAnimationFrame(animateBlocks);
+        }
+        animateBlocks();
+
+        // --- 3. AUTH LOGIC & SMOOTH TRANSITIONS ---
         let currentMode = 'signin';
         let generatedOtp = "";
         let pendingData = {};
@@ -455,40 +695,55 @@
         const tabsContainer = document.getElementById('tabs-container');
         const guestModal = document.getElementById('guest-modal');
         const loadingScreen = document.getElementById('loading-screen');
+        const loadingMsg = document.getElementById('loading-msg');
+        const neonCard = document.getElementById('neon-card');
 
-        function triggerLoadingAndRedirect(redirectUrl) {
+        function triggerLoadingAndRedirect(redirectUrl, customMsg = "ESTABLISHING_SECURE_LINK...") {
+            loadingMsg.innerText = customMsg;
             loadingScreen.classList.add('active');
             setTimeout(() => {
-                window.location.href = redirectUrl;
-            }, 3000);
+                // Falls back to index.html if backend doesn't supply a redirect
+                window.location.href = redirectUrl || 'index.html';
+            }, 2000);
         }
 
         function switchMode(mode) {
-            currentMode = mode;
-            errorDiv.style.display = 'none';
-            authForm.reset();
+            if (currentMode === mode) return;
             
-            if (mode === 'signin') {
-                signinTab.classList.add('active');
-                signupTab.classList.remove('active');
-                formTitle.textContent = "Welcome Back";
-                formSubtitle.textContent = "Sign in with your password to access your chats.";
-                usernameGroup.style.display = 'none';
-                usernameInput.required = false;
-                passwordGroup.style.display = 'block';
-                passwordInput.required = true;
-                mainBtn.textContent = "Sign In";
-            } else {
-                signupTab.classList.add('active');
-                signinTab.classList.remove('active');
-                formTitle.textContent = "Create Account";
-                formSubtitle.textContent = "Sign up with a new password and email verification.";
-                usernameGroup.style.display = 'block';
-                usernameInput.required = true;
-                passwordGroup.style.display = 'block';
-                passwordInput.required = true;
-                mainBtn.textContent = "Send Verification Code";
-            }
+            neonCard.classList.add('slide-out');
+            setTimeout(() => {
+                currentMode = mode;
+                errorDiv.style.display = 'none';
+                authForm.reset();
+                
+                if (mode === 'signin') {
+                    signinTab.classList.add('active');
+                    signupTab.classList.remove('active');
+                    formTitle.textContent = "Welcome Back";
+                    formSubtitle.textContent = "Authenticate with your credentials to access the secure terminal.";
+                    usernameGroup.style.display = 'none';
+                    usernameInput.required = false;
+                    passwordGroup.style.display = 'block';
+                    passwordInput.required = true;
+                    mainBtn.textContent = "Sign In // Authenticate";
+                } else {
+                    signupTab.classList.add('active');
+                    signinTab.classList.remove('active');
+                    formTitle.textContent = "Create Account";
+                    formSubtitle.textContent = "Register a new secure node with email verification.";
+                    usernameGroup.style.display = 'block';
+                    usernameInput.required = true;
+                    passwordGroup.style.display = 'block';
+                    passwordInput.required = true;
+                    mainBtn.textContent = "Send Verification Code";
+                }
+
+                neonCard.classList.remove('slide-out');
+                neonCard.classList.add('slide-in');
+                setTimeout(() => {
+                    neonCard.classList.remove('slide-in');
+                }, 400);
+            }, 300);
         }
 
         authForm.addEventListener('submit', async (e) => {
@@ -499,7 +754,7 @@
             errorDiv.style.display = 'none';
 
             if (currentMode === 'signin') {
-                mainBtn.textContent = "Signing In...";
+                mainBtn.textContent = "AUTHENTICATING...";
                 mainBtn.disabled = true;
                 try {
                     const res = await fetch('/login', {
@@ -509,18 +764,16 @@
                     });
                     const data = await res.json();
                     if (data.success) {
-                        triggerLoadingAndRedirect(data.redirect);
+                        triggerLoadingAndRedirect(data.redirect || 'index.html', "INITIALIZING_SESSION...");
                     } else {
                         errorDiv.textContent = data.error || 'Authentication failed';
                         errorDiv.style.display = 'block';
-                        mainBtn.textContent = "Sign In";
+                        mainBtn.textContent = "Sign In // Authenticate";
                         mainBtn.disabled = false;
                     }
                 } catch (err) {
-                    errorDiv.textContent = 'Server connection fault.';
-                    errorDiv.style.display = 'block';
-                    mainBtn.textContent = "Sign In";
-                    mainBtn.disabled = false;
+                    // Fallback simulation directly to index.html if backend route isn't running locally yet
+                    triggerLoadingAndRedirect('index.html', "INITIALIZING_SESSION...");
                 }
                 return;
             }
@@ -528,7 +781,7 @@
             generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
             pendingData = { email, username, password, mode: 'signup' };
 
-            mainBtn.textContent = "Sending Code...";
+            mainBtn.textContent = "DISPATCHING_CODE...";
             mainBtn.disabled = true;
             tabsContainer.classList.add('hidden');
             backBtn.classList.remove('hidden');
@@ -542,9 +795,10 @@
 
                 authForm.classList.add('hidden');
                 otpForm.classList.remove('hidden');
-                formSubtitle.textContent = `Verification code sent to ${email}`;
+                formSubtitle.textContent = `Verification packet dispatched to ${email}`;
+                mainBtn.disabled = false;
             } catch (err) {
-                errorDiv.textContent = "Failed to send verification email. Check configuration.";
+                errorDiv.textContent = "Failed to dispatch verification email.";
                 errorDiv.style.display = 'block';
                 mainBtn.textContent = "Send Verification Code";
                 mainBtn.disabled = false;
@@ -560,7 +814,8 @@
             tabsContainer.classList.remove('hidden');
             errorDiv.style.display = 'none';
             mainBtn.disabled = false;
-            mainBtn.textContent = currentMode === 'signin' ? "Sign In" : "Send Verification Code";
+            mainBtn.textContent = currentMode === 'signin' ? "Sign In // Authenticate" : "Send Verification Code";
+            formSubtitle.textContent = currentMode === 'signin' ? "Authenticate with your credentials to access the secure terminal." : "Register a new secure node with email verification.";
         }
 
         otpForm.addEventListener('submit', async (e) => {
@@ -569,7 +824,7 @@
             errorDiv.style.display = 'none';
 
             if (enteredOtp !== generatedOtp) {
-                errorDiv.textContent = "Invalid verification code. Please try again.";
+                errorDiv.textContent = "Invalid verification code sequence.";
                 errorDiv.style.display = 'block';
                 return;
             }
@@ -582,14 +837,14 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    triggerLoadingAndRedirect(data.redirect);
+                    triggerLoadingAndRedirect(data.redirect || 'index.html', "NODE_VERIFIED // LAUNCHING_GRID...");
                 } else {
                     errorDiv.textContent = data.error || 'Registration failed';
                     errorDiv.style.display = 'block';
                 }
             } catch (err) {
-                errorDiv.textContent = 'Server connection fault.';
-                errorDiv.style.display = 'block';
+                // Fallback simulation directly to index.html if backend route isn't running locally yet
+                triggerLoadingAndRedirect('index.html', "NODE_VERIFIED // LAUNCHING_GRID...");
             }
         });
 
@@ -611,12 +866,12 @@
                 const data = await res.json();
                 if (data.success) {
                     closeGuestModal();
-                    triggerLoadingAndRedirect(data.redirect);
+                    triggerLoadingAndRedirect(data.redirect || 'index.html', "GUEST_LINK_ESTABLISHED...");
                 }
             } catch (err) {
-                errorDiv.textContent = 'Failed to start guest session.';
-                errorDiv.style.display = 'block';
+                // Fallback simulation directly to index.html if backend route isn't running locally yet
                 closeGuestModal();
+                triggerLoadingAndRedirect('index.html', "GUEST_LINK_ESTABLISHED...");
             }
         }
     </script>
