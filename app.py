@@ -35,6 +35,10 @@ def robots_txt():
     content = "User-agent: *\nAllow: /"
     return Response(content, mimetype="text/plain")
 
+@app.route('/welcome')
+def welcome_page():
+    return render_template('welcome.html')
+
 @app.route('/')
 def index():
     if 'user_id' not in session:
