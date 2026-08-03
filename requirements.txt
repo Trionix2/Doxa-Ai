@@ -3,3 +3,4 @@ supabase
 google-genai
 gunicorn
 openai
+flask-cors
