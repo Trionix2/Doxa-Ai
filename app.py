@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, Response, session, redirect, url_for, jsonify
-from flask_cors import CORS  # <--- 1. Import CORS
+from flask_cors import CORS
 from datetime import datetime
 import urllib.parse
 import re
@@ -12,7 +12,7 @@ import os
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
 
-# 2. Enable CORS for all domains/routes so your frontend connects instantly without blocks
+# Enable CORS for all domains/routes so your frontend connects instantly
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Initialize Supabase Client using environment variables
@@ -185,16 +185,25 @@ def generate_image():
             "error": f"Image generation service unavailable: {str(e)}"
         }), 500
 
-# Unified chat endpoints supporting both /chat and /api/chat formats
 @app.route('/chat', methods=['POST'])
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    # Allow fallback if session isn't initialized during external API test checks
-    current_user_name = session.get('username', 'David')
+    user_id = session.get('user_id')
+    current_user_name = "User"
     
+    # Fetch the exact username dynamically from Supabase using their session user_id
+    if user_id and not session.get('is_guest'):
+        try:
+            user_res = supabase.table('users').select('username').eq('id', int(user_id)).execute()
+            if user_res.data and len(user_res.data) > 0:
+                current_user_name = user_res.data[0].get('username', 'User')
+        except Exception:
+            current_user_name = session.get('username', 'User')
+    else:
+        current_user_name = session.get('username', 'Guest User')
+
     data = request.get_json() or {}
     
-    # Accept both 'history' lists or a single string 'message' parameter from your frontend
     history = data.get('history', [])
     message = data.get('message', '').strip()
     
@@ -203,6 +212,9 @@ def chat():
         
     selected_mode = data.get('mode', 'standard')
     personality_instruction = PERSONALITY_PROMPTS.get(selected_mode, PERSONALITY_PROMPTS["standard"])
+    
+    # Capture request headers *before* entering the generator to prevent context errors
+    wants_json = request.headers.get('Accept') == 'application/json' or not request.headers.get('X-Streaming')
 
     def generate():
         try:
@@ -248,19 +260,18 @@ def chat():
 
             processed_text = re.sub(r'\[GENERATE_IMAGE:\s*(.*?)\]', replace_image_tag, raw_text)
             
-            # If the client sent a standard JSON request instead of a text stream, return JSON directly
-            if request.headers.get('Accept') == 'application/json' or not request.headers.get('X-Streaming'):
+            if wants_json:
                 return jsonify({"response": processed_text})
                 
             yield processed_text
 
         except Exception as e:
             error_msg = f"\n[Error: {str(e)}]"
-            if request.headers.get('Accept') == 'application/json':
+            if wants_json:
                 return jsonify({"response": error_msg}), 500
             yield error_msg
 
-    if request.headers.get('Accept') == 'application/json':
+    if wants_json:
         return generate()
 
     return Response(generate(), mimetype='text/plain')
@@ -269,10 +280,23 @@ def chat():
 def openai_chat():
     if 'user_id' not in session:
         return jsonify({"error": "Unauthorized"}), 401
+        
+    user_id = session.get('user_id')
+    current_user_name = "User"
+    
+    # Fetch the exact username dynamically for OpenAI as well
+    if user_id and not session.get('is_guest'):
+        try:
+            user_res = supabase.table('users').select('username').eq('id', int(user_id)).execute()
+            if user_res.data and len(user_res.data) > 0:
+                current_user_name = user_res.data[0].get('username', 'User')
+        except Exception:
+            current_user_name = session.get('username', 'User')
+    else:
+        current_user_name = session.get('username', 'Guest User')
 
     data = request.get_json()
     history = data.get('history', [])
-    current_user_name = session.get('username', 'User')
     current_date_str = datetime.now().strftime("%B %d, %Y")
 
     formatted_messages = [
