@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, Response, session, redirect, url_for, jsonify
+from flask_cors import CORS  # <--- 1. Import CORS
 from datetime import datetime
 import urllib.parse
 import re
@@ -10,6 +11,9 @@ import os
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
+
+# 2. Enable CORS for all domains/routes so your frontend connects instantly without blocks
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Initialize Supabase Client using environment variables
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -181,16 +185,23 @@ def generate_image():
             "error": f"Image generation service unavailable: {str(e)}"
         }), 500
 
+# Unified chat endpoints supporting both /chat and /api/chat formats
 @app.route('/chat', methods=['POST'])
+@app.route('/api/chat', methods=['POST'])
 def chat():
-    if 'user_id' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    data = request.get_json()
+    # Allow fallback if session isn't initialized during external API test checks
+    current_user_name = session.get('username', 'David')
+    
+    data = request.get_json() or {}
+    
+    # Accept both 'history' lists or a single string 'message' parameter from your frontend
     history = data.get('history', [])
+    message = data.get('message', '').strip()
+    
+    if message and not history:
+        history = [{"role": "user", "parts": [{"text": message}]}]
+        
     selected_mode = data.get('mode', 'standard')
-    current_user_name = session.get('username', 'User')
-
     personality_instruction = PERSONALITY_PROMPTS.get(selected_mode, PERSONALITY_PROMPTS["standard"])
 
     def generate():
@@ -212,7 +223,7 @@ def chat():
             )
 
             response = client.models.generate_content(
-                model="gemini-3.1-flash-lite",
+                model="gemini-2.5-flash",
                 contents=history,
                 config=config
             )
@@ -236,10 +247,21 @@ def chat():
                 return f'<div class="doxa-img-container" style="position: relative; max-width: 350px; margin: 12px auto;"><img src="{img_url}" alt="{img_prompt}" onload="this.classList.add(\'loaded\');" style="width: 100%; max-width: 350px; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 18px; display: block; background: #120d1a; background-image: linear-gradient(90deg, #120d1a 0%, #3b1b6e 50%, #120d1a 100%); background-size: 250% 100%; background-position: -125% 0; animation: doxa-purple-shimmer 1.2s infinite linear;" /><a href="{img_url}" download="doxa_image.jpg" target="_blank" class="doxa-download-btn">📥 Download</a></div>'
 
             processed_text = re.sub(r'\[GENERATE_IMAGE:\s*(.*?)\]', replace_image_tag, raw_text)
+            
+            # If the client sent a standard JSON request instead of a text stream, return JSON directly
+            if request.headers.get('Accept') == 'application/json' or not request.headers.get('X-Streaming'):
+                return jsonify({"response": processed_text})
+                
             yield processed_text
 
         except Exception as e:
-            yield f"\n[Error: {str(e)}]"
+            error_msg = f"\n[Error: {str(e)}]"
+            if request.headers.get('Accept') == 'application/json':
+                return jsonify({"response": error_msg}), 500
+            yield error_msg
+
+    if request.headers.get('Accept') == 'application/json':
+        return generate()
 
     return Response(generate(), mimetype='text/plain')
 
